@@ -1,0 +1,6 @@
+Welcome to this weapon maker tool thinggy. Untill I find a way to implement this within my game, I'll have no other choice but to do it this way.
+What the hell is this tool you might ask?
+For those who were wondering, while I was manuely writing every single dam weapon in the game from scratch, I thought to my self. Why should I waste hours of my precious time doing this crap when I could just automate this process with the help of AI I mean what?
+I, totally didn't just say that? I mean, ahem. But siriosely though, courtesy goes out to my coding assistant claude for it's generous contributions. Without it I would of been in the dark about what to do with myself while writing this.
+Anyways, this little app lets you add, edit, and view weapons, along with showing there respected stats for them. Just so I don't make myself look like an olympic athlete with my lazy ass, I'm still going to be making shields manuely, as even I don't particularly feel like asking my coding assistant for any more help then I give it credit for. Sorry not sorry.
+Enjoy or whatever. I'm going to take a well Deserved coding bath to wash off all my functions and sintaks down the drain. Woopty doo!

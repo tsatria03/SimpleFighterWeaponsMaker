@@ -1,0 +1,1 @@
+Thanks goes to Nikita K for helping me edit the stats of all weapons and optimizing the overall code of the program.

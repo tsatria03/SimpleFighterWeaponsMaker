@@ -1,0 +1,205 @@
+double percent(double n1, double n2)
+{
+return (n1/n2)*100;
+}
+double average(double[] vals, int roundval=2)
+{
+double res=0;
+for(uint i=0; i<vals.length(); i++)
+{
+res=res+vals[i];
+}
+res=res/vals.length();
+res=round(res,roundval);
+return res;
+}
+bool directory_empty(const string&in dir)
+{
+if (!directory_exists(dir))
+{
+return false;
+}
+string[] files=find_files(dir+"/*");
+string[] folders=find_directories(dir+"/*");
+return files.length()==0 and folders.length()==0;
+}
+bool string_file_encrypt(string input_file, string output_file, string key)
+{
+bool success;
+file f;
+success=f.open(input_file, "rb");
+if(!success) return false;
+string text=f.read();
+text=string_encrypt(text, key);
+if(text=="") return false;
+success=f.open(output_file, "wb");
+if(!success) return false;
+f.write(text);
+success=f.close();
+return success;
+}
+bool string_file_decrypt(const string& input_file, const string& output_file, const string& encryption_key)
+{
+file input;
+if (!input.open(input_file, "rb"))
+return false;
+string encrypted_content = input.read();
+input.close();
+string decrypted_content = string_decrypt(encrypted_content, encryption_key);
+file output;
+if (!output.open(output_file, "wb"))
+return false;
+output.write(decrypted_content);
+output.close();
+return true;
+}
+bool int_to_bool(int i)
+{
+return i==1? true:false;
+}
+bool string_starts_with(const string& in str, const string& in start)
+{
+if (str.length()>=start.length())
+{
+return (str.substr(0, start.length()) == start);
+}
+return false;
+}
+bool string_ends_with(const string& in str,const string& in ending)
+{
+if (str.length()>=ending.length())
+{
+return (str.substr(str.length()-ending.length())==ending);
+}
+return false;
+}
+bool string_to_bool(string str)
+{
+return str.trim_whitespace().lower()=="true"? true:false;
+}
+float stn(string str)
+{
+if (string_contains(str,"random",1)>-1)
+{
+string a=string_replace(str,"random(","",true);
+a=string_replace(a,")","",true);
+string[] b=string_split(a,",",true);
+double c=0;
+c=random(string_to_number(b[0]),string_to_number(b[1]));
+return c;
+}
+else
+return string_to_number(str);
+}
+int bool_to_int(bool b)
+{
+return b? 1:0;
+}
+string find_sound(string soundname)
+{
+string[] snd=find_files(soundname);
+if (snd.length()>0)
+{
+string[] a_path=string_split(soundname,"/",true);
+string path=string_replace(soundname,a_path[a_path.length()-1],"",true);
+return path+snd[random(0,snd.length()-1)];
+}
+else
+return "";
+}
+string linear(string[] a)
+{
+string final;
+for(uint i=0; i<a.length(); i++)
+{
+final+=(a[i]+"\r\n");
+}
+return final;
+}
+string[] delinear(string a)
+{
+return string_split(a, "\r\n", false);
+}
+string join_string_array(string[] arr, uint start, uint end)
+{
+string result = "";
+for(uint i = start; i < end; i++)
+{
+if(i>start) result+=" ";
+result+=arr[i];
+}
+return result;
+}
+string string_join(const string[]& in arr, const string& in delimiter)
+{
+string result="";
+for (uint i=0; i<arr.length(); i++)
+{
+if(i>0)
+result += delimiter;
+result += arr[i];
+}
+return result;
+}
+string string_trim_sides(const string& in str)
+{
+string result=str;
+while (result.length()>0 && (result[0]==" "||result[0]=="\t"||result[0]=="\r"||result[0]=="\n"))
+{
+result=string_trim_left(result,1);
+}
+while (result.length()>0 && (result[result.length()-1]==" "||result[result.length()-1]=="\t"||result[result.length()-1]=="\r"||result[result.length()-1]=="\n"))
+{
+result=string_trim_right(result,1);
+}
+return result;
+}
+string file_decrypt(const string& encrypted_content, const string& encryption_key)
+{
+return string_decrypt(encrypted_content, encryption_key);
+}
+string script_get_path()
+{
+string scriptpath;
+if(SCRIPT_COMPILED==false)
+{
+scriptpath=SCRIPT_CURRENT_FILE;
+}
+else
+{
+scriptpath=SCRIPT_EXECUTABLE;
+}
+return scriptpath;
+}
+string script_get_folder()
+{
+string path=script_get_path();
+string[] spl=string_split(path, "\\", true);
+spl.resize(spl.length()-1);
+string folder;
+for(uint i=0; i<spl.length(); i++)
+{
+folder+=spl[i];
+if(i<spl.length()-1) folder+="\\";
+}
+return folder;
+}
+string string2file(string thing)
+{
+thing=string_replace(thing,"\\","/",true);
+thing=string_replace(thing,"/"," ",true);
+return thing;
+}
+void filter_empty_lines(string[] lines, string[]& filtered_lines, uint[]& original_lines)
+{
+filtered_lines.resize(0);
+original_lines.resize(0);
+for (uint i=0; i<lines.length(); i++)
+{
+if (lines[i].length()>0)
+{
+filtered_lines.insert_last(lines[i]);
+original_lines.insert_last(i);
+}
+}
+}

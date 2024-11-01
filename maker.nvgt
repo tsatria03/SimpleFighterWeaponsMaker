@@ -1,0 +1,255 @@
+#include"bgt_compat.nvgt"
+#include"sound_pool.nvgt"
+#include"includes/dlg.nvgt"
+#include"includes/extrafuncts.nvgt"
+#include"includes/fadepool.nvgt"
+#include"includes/form.nvgt"
+#include"includes/key_hold.nvgt";
+#include"includes/m_pro.nvgt"
+#include"includes/speech.nvgt"
+#include"includes/text_input.nvgt"
+file f;
+int wfiles = 0;
+dynamic_menu_pro m;
+sound_pool pool, spool;
+text_input input;
+string[] lines;
+string wname,wcat;
+void main()
+{
+show_game_window("Weapons maker");
+weapon_management_menu();
+}
+void setupmenu()
+{
+m.reset(false);
+m.add_music("sounds/menumus"+random(1,3)+".ogg");
+m.enable_up_and_down=false;
+m.enable_left_and_right=true;
+m.enable_home_and_end=true;
+m.enable_first_letter_navigation=true;
+m.enable_numbers=true;
+m.enable_side_scrolling=true;
+m.speak_position_information=false;
+m.wrap=true;
+m.click_sound="sounds/menuclick.ogg";
+m.enter_sound="sounds/menuenter.ogg";
+m.open_sound="sounds/menuopen.ogg";
+m.wrap_sound="sounds/menuwrap.ogg";
+}
+void setupmenu2()
+{
+m.reset(false);
+m.add_music("");
+m.enable_up_and_down=true;
+m.enable_left_and_right=false;
+m.enable_home_and_end=true;
+m.enable_first_letter_navigation=true;
+m.enable_numbers=true;
+m.enable_side_scrolling=false;
+m.speak_position_information=false;
+m.wrap=true;
+m.click_sound="menuclick.ogg";
+m.enter_sound="menuenter.ogg";
+m.open_sound="menuopen.ogg";
+m.wrap_sound="menuwrap.ogg";
+}
+void weapon_management_menu() {
+    while(true) {
+        setupmenu();
+        m.add_item_tts("Add new weapon", "add");
+        m.add_item_tts("Edit existing weapon", "edit");
+        m.add_item_tts("View weapons", "view");
+        m.add_item_tts("Manage weapon categories", "categories");
+        m.add_item_tts("Exit", "ex");
+        int mres = m.run("Weapon Management Menu", true);
+        string choice = m.get_item_name(mres);
+        if (choice == "add") {
+m.fade_music(20);
+            add_weapon_menu();
+        } else if (choice == "edit") {
+            edit_weapon_menu();
+        } else if (choice == "view") {
+            view_weapons_menu();
+        } else if (choice == "categories") {
+            manage_categories_menu();
+        } else if (choice == "ex" or mres==0) {
+            exit();
+        }
+    }
+}
+void add_weapon_menu() {
+    setupmenu();
+    string category = input.input("Enter weapon category:");
+    string weapon_name = input.input("Enter weapon name:");
+    
+    // Use your existing create_weapon_file function
+    create_weapon_file(category, weapon_name);
+    
+    // Now let's add a menu to edit the newly created weapon's stats
+prepare_to_edit(category, weapon_name);
+    edit_weapon_stats();
+}
+void edit_weapon_menu() {
+    setupmenu();
+    string category = select_category_menu();
+    string weapon = select_weapon_menu(category);
+prepare_to_edit(category, weapon);
+    edit_weapon_stats();
+}
+void prepare_to_edit(string category, string weapon){
+    string filepath = "weapons/" + category + "/" + weapon + "/" + weapon + ".sif";
+    file f;
+    f.open(filepath, "rb");
+    string content = f.read();
+    f.close();
+    lines = string_split(content, "\r\n", true);
+wname=weapon; wcat=category;}
+void edit_weapon_stats() {
+    setupmenu();
+    for (uint i = 0; i < lines.length(); i++) {
+        string[] parts = string_split(lines[i], "=", true);
+        if (parts.length() == 2) {
+            m.add_item_tts(parts[0] + "=" + parts[1], parts[0]);
+        }
+    }
+    m.add_item_tts("Save and exit", "save");
+    
+        int mres = m.run("Edit " + wname + " stats", true);
+        string choice = m.get_item_name(mres);
+        
+        if (choice == "save") {
+            save_weapon_stats(wcat, wname, lines);
+        } else {
+            string new_value = input.input("Enter new value for " + choice + ":");
+            for (uint i = 0; i < lines.length(); i++) {
+                if (string_starts_with(lines[i], choice + "=")) {
+                    lines[i] = choice + "=" + new_value;
+edit_weapon_stats();
+                    //break;
+                }
+            }
+        }
+    }
+void save_weapon_stats(string category, string weapon, string[] lines) {
+    string filepath = "weapons/" + category + "/" + weapon + "/" + weapon + ".sif";
+    file f;
+    f.open(filepath, "wb");
+    f.write(string_join(lines, "\r\n"));
+    f.close();
+}
+void view_weapons_menu() {
+    while(true) {
+        setupmenu();
+        string category = select_category_menu();
+        if (category == "") return; // Go back to main menu
+        string weapon = select_weapon_menu(category);
+        if (weapon == "") continue; // Go back to category selection
+        view_weapon_stats(category, weapon);
+    }
+}
+void view_weapon_stats(string category, string weapon) {
+    setupmenu();
+    string filepath = "weapons/" + category + "/" + weapon + "/" + weapon + ".sif";
+    file f;
+    f.open(filepath, "rb");
+    string content = f.read();
+    f.close();
+    
+    string[] lines = string_split(content, "\r\n", true);
+    for (uint i = 0; i < lines.length(); i++) {
+        m.add_item_tts(lines[i], "", "", false);
+    }
+    m.add_item_tts("Back", "back");
+    
+    int mres = m.run("Viewing " + weapon + " stats", true);
+    if (m.get_item_name(mres) == "back" || mres == 0) {
+        return; // Go back to weapon selection
+    }
+}
+void manage_categories_menu() {
+    setupmenu();
+    m.add_item_tts("Add new category", "add");
+    m.add_item_tts("Remove category", "remove");
+    m.add_item_tts("Back", "back");
+    int mres = m.run("Manage Weapon Categories", true);
+    string choice = m.get_item_name(mres);
+
+    if (choice == "add") {
+        string new_category = input.input("Enter new category name:");
+        string folder_path = "weapons/" + new_category;
+        if (!directory_exists(folder_path)) {
+            directory_create(folder_path);
+            alert("Success", "Category " + new_category + " has been created.");
+        } else {
+            alert("Error", "Category already exists.");
+        }
+    } else if (choice == "remove") {
+        string category_to_remove = select_category_menu();
+        if (category_to_remove != "") {
+            string folder_path = "weapons/" + category_to_remove;
+            if (directory_exists(folder_path)) {
+                directory_delete(folder_path);
+                alert("Success", "Category " + category_to_remove + " has been removed.");
+            } else {
+                alert("Error", "Category does not exist.");
+            }
+        }
+    }
+}
+string select_category_menu() {
+    setupmenu();
+    string[] categories = find_directories("weapons/*");
+    for (uint i = 0; i < categories.length(); i++) {
+        m.add_item_tts(categories[i], categories[i]);
+    }
+    m.add_item_tts("Back", "back");
+    int mres = m.run("Select Weapon Category", true);
+    if (m.get_item_name(mres) == "back" || mres == 0) {
+        return "";
+    }
+    return m.get_item_name(mres);
+}
+
+string select_weapon_menu(string category) {
+    setupmenu();
+    string[] weapons = find_directories("weapons/" + category + "/*");
+    for (uint i = 0; i < weapons.length(); i++) {
+        m.add_item_tts(weapons[i], weapons[i]);
+    }
+    m.add_item_tts("Back", "back");
+    int mres = m.run("Select Weapon", true);
+    if (m.get_item_name(mres) == "back" || mres == 0) {
+        return "";
+    }
+    return m.get_item_name(mres);
+}
+void create_weapon_file(string category, string weapon) {
+    string folder_path = "weapons/" + category + "/" + weapon;
+    if (!directory_exists(folder_path)) {
+        directory_create(folder_path);
+    }
+    f.open(folder_path + "/" + weapon + ".sif", "wb");
+    f.write("name=" + weapon + "\r\n" + """damage=1
+mode=0
+horizontal range=1
+vertical range=1
+bullet speed=30
+repeat time=100
+spam time=100
+weight=1
+ammo=100
+loaded ammo=100
+max ammo=100
+unlock level=1
+draw sound=1
+empty sound=1
+fire sound=1
+hit sound=1
+loop sound=1
+rec sound=1
+reload sound=1
+shell sound=1""");
+    f.close();
+    wfiles++;
+}

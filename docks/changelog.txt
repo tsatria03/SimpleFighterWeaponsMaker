@@ -1,0 +1,2 @@
+new in 1.0
+Created the first stable version of this weapons maker tool. I'm hoping it becomes a good of a use to people out there.
