@@ -81,12 +81,8 @@ m.fade_music(20);
 void add_weapon_menu() {
     setupmenu();
     string category = input.input("Enter weapon category:");
-    string weapon_name = input.input("Enter weapon name:");
-    
-    // Use your existing create_weapon_file function
+    string weapon_name = input.input("Enter weapon name:");    
     create_weapon_file(category, weapon_name);
-    
-    // Now let's add a menu to edit the newly created weapon's stats
 prepare_to_edit(category, weapon_name);
     edit_weapon_stats();
 }
@@ -116,8 +112,7 @@ void edit_weapon_stats() {
     m.add_item_tts("Save and exit", "save");
     
         int mres = m.run("Edit " + wname + " stats", true);
-        string choice = m.get_item_name(mres);
-        
+        string choice = m.get_item_name(mres);       
         if (choice == "save") {
             save_weapon_stats(wcat, wname, lines);
         } else {
@@ -126,7 +121,6 @@ void edit_weapon_stats() {
                 if (string_starts_with(lines[i], choice + "=")) {
                     lines[i] = choice + "=" + new_value;
 edit_weapon_stats();
-                    //break;
                 }
             }
         }
@@ -142,9 +136,9 @@ void view_weapons_menu() {
     while(true) {
         setupmenu();
         string category = select_category_menu();
-        if (category == "") return; // Go back to main menu
+        if (category == "") return;
         string weapon = select_weapon_menu(category);
-        if (weapon == "") continue; // Go back to category selection
+        if (weapon == "") continue;
         view_weapon_stats(category, weapon);
     }
 }
@@ -154,17 +148,15 @@ void view_weapon_stats(string category, string weapon) {
     file f;
     f.open(filepath, "rb");
     string content = f.read();
-    f.close();
-    
+    f.close();   
     string[] lines = string_split(content, "\r\n", true);
     for (uint i = 0; i < lines.length(); i++) {
         m.add_item_tts(lines[i], "", "", false);
     }
     m.add_item_tts("Back", "back");
-    
     int mres = m.run("Viewing " + weapon + " stats", true);
     if (m.get_item_name(mres) == "back" || mres == 0) {
-        return; // Go back to weapon selection
+        return;
     }
 }
 void manage_categories_menu() {
@@ -174,7 +166,6 @@ void manage_categories_menu() {
     m.add_item_tts("Back", "back");
     int mres = m.run("Manage Weapon Categories", true);
     string choice = m.get_item_name(mres);
-
     if (choice == "add") {
         string new_category = input.input("Enter new category name:");
         string folder_path = "weapons/" + new_category;
@@ -210,7 +201,6 @@ string select_category_menu() {
     }
     return m.get_item_name(mres);
 }
-
 string select_weapon_menu(string category) {
     setupmenu();
     string[] weapons = find_directories("weapons/" + category + "/*");
