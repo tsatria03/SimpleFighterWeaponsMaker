@@ -1,0 +1,288 @@
+#include"bgt_compat.nvgt"
+#include"sound_pool.nvgt"
+#include"includes/dlg.nvgt"
+#include"includes/extrafuncts.nvgt"
+#include"includes/fadepool.nvgt"
+#include"includes/form.nvgt"
+#include"includes/key_hold.nvgt";
+#include"includes/m_pro.nvgt"
+#include"includes/speech.nvgt"
+#include"includes/text_input.nvgt"
+file f;
+dynamic_menu_pro m;
+sound_pool pool, spool;
+text_input input;
+string current_weapon_name, current_weapon_category;
+string[] current_lines;
+
+class weapon
+{
+    int damage, mode, range_x, range_y, bullet_speed, repeat_time, spam_time, weight;
+    double ammo, loaded_ammo, max_ammo;
+    int draw_sound, empty_sound, fire_sound, hit_sound, loop_sound, rec_sound, reload_sound, shell_sound;
+    weapon() {}
+    weapon(string[] lines) {
+        for (uint i = 0; i < lines.length(); i++) {
+            string[] kv = string_split(lines[i], "=", true);
+            if (kv.length() == 2) {
+                string key = kv[0]; string val = kv[1];
+                if (key == "damage") damage = string_to_int(val);
+                else if (key == "mode") mode = string_to_int(val);
+                else if (key == "horizontal range") range_x = string_to_int(val);
+                else if (key == "vertical range") range_y = string_to_int(val);
+                else if (key == "bullet speed") bullet_speed = string_to_int(val);
+                else if (key == "repeat time") repeat_time = string_to_int(val);
+                else if (key == "spam time") spam_time = string_to_int(val);
+                else if (key == "weight") weight = string_to_int(val);
+                else if (key == "ammo") ammo = string_to_double(val);
+                else if (key == "loaded ammo") loaded_ammo = string_to_double(val);
+                else if (key == "max ammo") max_ammo = string_to_double(val);
+                else if (key == "draw sound") draw_sound = string_to_int(val);
+                else if (key == "empty sound") empty_sound = string_to_int(val);
+                else if (key == "fire sound") fire_sound = string_to_int(val);
+                else if (key == "hit sound") hit_sound = string_to_int(val);
+                else if (key == "loop sound") loop_sound = string_to_int(val);
+                else if (key == "rec sound") rec_sound = string_to_int(val);
+                else if (key == "reload sound") reload_sound = string_to_int(val);
+                else if (key == "shell sound") shell_sound = string_to_int(val);
+            }
+        }
+    }
+}
+
+void main()
+{
+    show_game_window("Weapons Maker");
+    while (true)
+{
+wait(5);
+        setupmenu();
+        m.add_item_tts("Add new weapon", "add");
+        m.add_item_tts("Edit existing weapon", "edit");
+        m.add_item_tts("View weapons", "view");
+        m.add_item_tts("Manage weapon categories", "categories");
+        m.add_item_tts("Regenerate missing info files", "regen");
+        m.add_item_tts("Exit", "exit");
+        int res = m.run("Weapon Management Menu", true);
+        string choice = m.get_item_name(res);
+        if (choice == "add") add_weapon_menu();
+        else if (choice == "edit") edit_weapon_menu();
+        else if (choice == "view") view_weapons_menu();
+        else if (choice == "categories") manage_categories_menu();
+        else if (choice == "regen") regenerate_missing_info_files();
+        else break;
+    }
+}
+void add_weapon_menu()
+{
+    setupmenu();
+    string category = input.input("Enter weapon category:");
+    string weapon_name = input.input("Enter weapon name:");
+    create_weapon_file(category, weapon_name);
+    load_weapon_for_edit(category, weapon_name);
+    edit_weapon_stats();
+}
+void edit_weapon_menu()
+{
+    string category = select_category_menu();
+    if (category == "") return;
+    string weapon = select_weapon_menu(category);
+    if (weapon == "") return;
+    load_weapon_for_edit(category, weapon);
+    edit_weapon_stats();
+}
+void regenerate_missing_info_files()
+{
+    if (!directory_exists("weapons")) {
+        alert("Error", "The weapons folder does not exist. Please create a category or weapon first.");
+        return;
+    }
+    int regenerated = 0;
+    string[] categories = find_directories("weapons/*");
+    for (uint i = 0; i < categories.length(); i++)
+    {
+        string category = categories[i];
+        string[] weapons = find_directories("weapons/" + category + "/*");
+        for (uint j = 0; j < weapons.length(); j++)
+        {
+            string weapon = weapons[j];
+            string info_path = "weapons/" + category + "/" + weapon + "/info.sif";
+            if (!file_exists(info_path)) {
+                create_weapon_file(category, weapon);
+                regenerated++;
+            }
+        }
+    }
+    if (regenerated == 0)
+        alert("Done", "All weapons already have info files.");
+    else
+        alert("Success", "Regenerated " + int_to_string(regenerated) + " missing info.sif files.");
+}
+void load_weapon_for_edit(string category, string weapon)
+{
+    string path = "weapons/" + category + "/" + weapon + "/info.sif";
+    file f;
+    f.open(path, "rb");
+    current_lines = string_split(f.read(), "\r\n", true);
+    f.close();
+    current_weapon_category = category;
+    current_weapon_name = weapon;
+}
+void edit_weapon_stats()
+{
+    while (true)
+    {
+        wait(5);
+        setupmenu();
+        for (uint i = 0; i < current_lines.length(); i++) {
+            string[] parts = string_split(current_lines[i], "=", true);
+            if (parts.length() == 2)
+                m.add_item_tts(parts[0] + "=" + parts[1], parts[0]);
+        }
+        m.add_item_tts("Add new stat line", "add");
+        m.add_item_tts("Remove stat line", "remove");
+        m.add_item_tts("Save and exit", "save");
+        int res = m.run("Edit " + current_weapon_name + " stats", true);
+        string choice = m.get_item_name(res);
+        if (choice == "save" || res == 0) {
+            save_weapon_stats(current_weapon_category, current_weapon_name, current_lines);
+            break;
+        }
+        if (choice == "add") {
+            string new_line = input.input("Enter new stat line in the form key=value:");
+if (string_contains(new_line, "=", 1)>-1)
+{
+                current_lines.insert_last(new_line);
+            } else {
+                alert("Error", "Invalid format. Please use key=value.");
+            }
+        }
+        else if (choice == "remove") {
+            setupmenu();
+            for (uint i = 0; i < current_lines.length(); i++) {
+                string[] parts = string_split(current_lines[i], "=", true);
+                if (parts.length() == 2)
+                    m.add_item_tts(parts[0] + "=" + parts[1], parts[0]);
+            }
+            m.add_item_tts("Back", "back");
+            int r = m.run("Select stat line to remove", true);
+            string remove_choice = m.get_item_name(r);
+            if (remove_choice == "back" || r == 0) continue;
+            for (uint i = 0; i < current_lines.length(); i++) {
+                if (string_starts_with(current_lines[i], remove_choice + "=")) {
+                    current_lines.remove_at(i);
+                    break;
+                }
+            }
+        }
+        else {
+            string val = input.input("Enter new value for " + choice + ":");
+            for (uint i = 0; i < current_lines.length(); i++) {
+                if (string_starts_with(current_lines[i], choice + "=")) {
+                    current_lines[i] = choice + "=" + val;
+                    break;
+                }
+            }
+        }
+    }
+}
+void save_weapon_stats(string category, string weapon, string[] lines)
+{
+    string path = "weapons/" + category + "/" + weapon + "/info.sif";
+    file f;
+    f.open(path, "wb");
+    f.write(string_join(lines, "\r\n"));
+    f.close();
+}
+void view_weapons_menu()
+{
+    string category = select_category_menu();
+    if (category == "") return;
+    string weapon = select_weapon_menu(category);
+    if (weapon == "") return;
+    string path = "weapons/" + category + "/" + weapon + "/info.sif";
+    file f;
+    f.open(path, "rb");
+    string[] lines = string_split(f.read(), "\r\n", true);
+    f.close();
+    setupmenu();
+    for (uint i = 0; i < lines.length(); i++)
+        m.add_item_tts(lines[i], "", "", false);
+    m.add_item_tts("Back", "back");
+    m.run("Viewing " + weapon + " stats", true);
+}
+void manage_categories_menu()
+{
+    setupmenu();
+    m.add_item_tts("Add new category", "add");
+    m.add_item_tts("Remove category", "remove");
+    m.add_item_tts("Back", "back");
+    int res = m.run("Select a weapon category to manage.", true);
+    string choice = m.get_item_name(res);
+    if (choice == "add") {
+        string name = input.input("Enter new category name:");
+        string path = "weapons/" + name;
+        if (!directory_exists(path)) {
+            directory_create(path);
+            alert("Success", "Category " + name + " created.");
+        } else alert("Error", "Category already exists.");
+    } else if (choice == "remove") {
+        string name = select_category_menu();
+        if (name == "") return;
+        string path = "weapons/" + name;
+        if (directory_exists(path)) {
+            directory_delete(path);
+            alert("Success", "Category " + name + " removed.");
+        } else alert("Error", "Category does not exist.");
+    }
+}
+string select_category_menu()
+{
+    setupmenu();
+    string[] cats = find_directories("weapons/*");
+    for (uint i = 0; i < cats.length(); i++)
+        m.add_item_tts(cats[i], cats[i]);
+    m.add_item_tts("Back", "back");
+    int res = m.run("Select Weapon Category", true);
+    string sel = m.get_item_name(res);
+    return (sel == "back" || res == 0) ? "" : sel;
+}
+string select_weapon_menu(string category)
+{
+    setupmenu();
+    string[] weps = find_directories("weapons/" + category + "/*");
+    for (uint i = 0; i < weps.length(); i++)
+        m.add_item_tts(weps[i], weps[i]);
+    m.add_item_tts("Back", "back");
+    int res = m.run("Select Weapon", true);
+    string sel = m.get_item_name(res);
+    return (sel == "back" || res == 0) ? "" : sel;
+}
+void create_weapon_file(string category, string weapon)
+{
+    string path = "weapons/" + category + "/" + weapon;
+    if (!directory_exists(path)) directory_create(path);
+    file f;
+    f.open(path + "/info.sif", "wb");
+    f.write("name=" + weapon + "\r\n" + """
+damage=1
+mode=0
+horizontal range=1
+vertical range=1
+bullet speed=30
+repeat time=100
+spam time=100
+weight=1
+ammo=100
+loaded ammo=100
+max ammo=100
+draw sound=1
+empty sound=1
+fire sound=1
+hit sound=1
+loop sound=1
+rec sound=1
+reload sound=1
+shell sound=1""");
+    f.close();
+}
